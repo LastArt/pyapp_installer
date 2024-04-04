@@ -2,16 +2,15 @@ import argparse
 from utils import * 
 
 
-def argparser_do():
-    parser = argparse.ArgumentParser(description="Time Inspector 1.0 Учет рабочего времени\n"
-                                                "с использованием api TimeControl, "
+def argparser_do(argv=None):
+    parser = argparse.ArgumentParser(description="pyappinstaller 0.1 Программа для быстрого развертывания\n"
+                                                "сервисов на серверах.\n "
                                                 "Все права защищены (с) 2024 \n"
-                                                "Манукян Артур <it_doctor82@mail.ru>")
+                                                "Манукян Артур <e-mail>")
 
     parser.epilog = ("Пример:\n"
-                    "tminspector -d '156400' -o 'Название объекта'")
-
-    parser.add_argument('-h', '--help', action='help', help='показать помощи и выйти')
+                    "pyappinstaller -d '/usr/me/myfolder' -a 'my_project' -f 'main' -u 'MyGithubUserName' -p  -k 'your_token'")
+    
     parser.add_argument('-v', '--version', action='version', version=version_with_name, help='показать версию программы и выйти')
     parser.add_argument('-d', '--dir', help='Директория для разворачивания Вашего приложения')
     parser.add_argument('-a', '--app', help='Название вашего проекта в github')
@@ -20,18 +19,22 @@ def argparser_do():
     parser.add_argument('-p', '--private', action='store_true', help='Определяет тип репозитория как private')
     parser.add_argument('-t', '--token', help='Персональный токен ползователя github если указан флаг -p --private')
 
-    args = parser.parse_args()
-    print("Полученные аргументы:", args)
+    args = parser.parse_args(argv)
 
-    if args.dir:
+    if args.dir is not None:
         update_shell_script_line("DIRECTORY", args.dir)
-    if args.app:
+    if args.app is not None:
         update_shell_script_line("APPNAME", args.app)
-    if args.file:
+    if args.file is not None:
         update_shell_script_line("MAINFILE", args.file)
-    if args.user:
+    if args.user is not None:
         update_shell_script_line("GITUSERNAME", args.user)
     if args.private:
-        update_shell_script_line("REPO_TYPE", "private")
-    if args.token:
+        update_shell_script_line("REPO_TYPE", args.private) #'private'
+    if args.token is not None:
         update_shell_script_line("TOKEN", args.token)
+
+    if hasattr(args, 'help'):  # Проверяем, был ли передан аргумент -h/--help
+        if args.help:  # Если аргумент -h/--help передан, выводим помощь и завершаем программу
+            parser.print_help()
+            exit()

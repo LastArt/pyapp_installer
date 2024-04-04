@@ -78,7 +78,7 @@ def update_shell_script_line(varname: str, arg: str):
         file.writelines(lines)
         file.truncate()  # Обрезать файл до текущей позиции курсора
     if updated:
-        print(f"Данные успешно обновлены в файле {filename}.")
+        print(f"Аргумент - {arg} зафиксирован")
     else:
         print(f"Не удалось найти строку с переменной {varname} для обновления.")
 
@@ -105,27 +105,29 @@ def update_shell_script(data_dict: dict, repo_type: str):
     # Ищем строки, которые нужно заменить
     for i, line in enumerate(lines):
         if line.startswith("DIRECTORY"):
-            lines[i] = f'DIRECTORY="{data_dict['directory']}"\n'
+            lines[i] = f'DIRECTORY="{data_dict["directory"]}"\n'
         elif line.startswith("APPNAME"):
-            lines[i] = f'APPNAME="{data_dict['appname']}"\n'
-        elif line.startswith("USERNAME"):
-            lines[i] = f'USERNAME="{data_dict['gitusername']}"\n'
+            lines[i] = f'APPNAME="{data_dict["appname"]}"\n'
+        elif line.startswith("MAINFILE"):
+            lines[i] = f'MAINFILE="{data_dict["mainfile"]}"\n'    
+        elif line.startswith("GITUSERNAME"):
+            lines[i] = f'GITUSERNAME="{data_dict["gitusername"]}"\n'
         elif line.startswith("REPO_TYPE"):
-            lines[i] = f'REPO_TYPE="{data_dict['repo_type']}"\n'
+            lines[i] = f'REPO_TYPE="{data_dict["repo_type"]}"\n'
         if repo_type == "1":
             if line.startswith("TOKEN"):
-                lines[i] = f'TOKEN="{data_dict['token']}"\n'
+                lines[i] = f'TOKEN="{data_dict["token"]}"\n'
             
     # Записываем обновленные строки обратно в файл
     with open("python_appinstaller.sh", "w") as file:
         file.writelines(lines)
-    print("Данные успешно обновлены в файле данные.sh.")
 
 
 def setup_script():
     data_dict ={}
     data_dict["directory"] = input("Укажите директорию куда будет распакован проект\n ---> ")
     data_dict["appname"] = input("Укажите название проекта [Где смотреть: https: //github.com/UserName/Название_вашего_проекта.git]\n ---> ")
+    data_dict["mainfile"] = input("Укажите название основного файла проекта без .py\n ---> ")
     data_dict["gitusername"] = input("Укажите имя пользователя на github [Где смотреть: https: //github.com/ВАШЕ_ИМЯ_ПОЛЬЗОВАТЕЛЯ/ВАШ_ПРОЕКТ.git]\n ---> ")
     repo_type = input("Укажите тип репозитория в котором находиться проект\n1 - Private (Приватный)\n2 - Public (Публичный)\n ---> ")
     if repo_type == "1":
@@ -136,6 +138,7 @@ def setup_script():
     print("\n\n" + Fore.GREEN + "Проверим наши настройки:" +"\n\n" + Fore.RESET)
     print("Директория для распаковки: " + Fore.YELLOW + data_dict["directory"] + Fore.RESET)
     print("Название проекта: " + Fore.YELLOW + data_dict["appname"] + Fore.RESET)
+    print("Название главного файла: " + Fore.YELLOW + data_dict["mainfile"] + Fore.RESET)
     print("Имя пользователя на github: " + Fore.YELLOW + data_dict["gitusername"] + Fore.RESET)
     print("Тип репозитория: " + Fore.YELLOW + data_dict["repo_type"] + Fore.RESET)
     if repo_type == "1":

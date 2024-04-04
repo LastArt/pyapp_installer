@@ -1,69 +1,88 @@
 #!/bin/bash
 
+# Цвета
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+NC='\033[0m' # No Color
+
 # Переменные для хранения аргументов
-DIRECTORY=""
-APPNAME=""
-MAINFILE=""
-GITUSERNAME=""
-REPO_TYPE=""
+DIRECTORY="/ack"
+APPNAME="Time-Inspector"
+MAINFILE="timeInspector"
+GITUSERNAME="LastArt"
+REPO_TYPE="public"
 TOKEN=""
 
+# Проверка наличия sudo прав и запрос пароля, если необходимо
+if [ "$EUID" -ne 0 ]; then
+    sudo "$0" "$@"
+    exit $?
+fi
+
 # Проверяем наличие данных в переменных
-if [ -z "$DIRECTORY" ] || [ -z "$APPNAME" ] || [ -z "$GITUSERNAME" ] || [ -z "$REPO_TYPE" ]; then
-    echo "Ошибка: не все данные заполнены."
+if [ -z "$DIRECTORY" ] || [ -z "$APPNAME" ] || [ -z "$MAINFILE" ] || [ -z "$GITUSERNAME" ] || [ -z "$REPO_TYPE" ]; then
+    echo -e "${RED}Ошибка: не все данные заполнены.${NC}"
     exit 1
 fi
 
-# Проверяем существование каталога, если он не существует, создаем
+# Выводим сообщение о начале установки
+echo -e "${GREEN}Начало установки.${NC}"
+
+# Проверяем существует ли уже каталог
+if [ -d "$DIRECTORY/$APPNAME" ]; then
+    echo -e "${YELLOW}Удаление существующего каталога${NC}"
+    if [ "$(ls -A $DIRECTORY/$APPNAME)" ]; then
+        rm -rf "$DIRECTORY/$APPNAME"
+    else
+        echo -e "${GREEN}Каталог $DIRECTORY/$APPNAME уже пуст.${NC}"
+    fi
+fi
+
+# Создаем каталог, если он не существует
 if [ ! -d "$DIRECTORY" ]; then
+    echo -e "${GREEN}Создание каталога $DIRECTORY.${NC}"
     mkdir -p "$DIRECTORY"
 fi
 
-# Переходим в созданный нами каталог
-cd "$DIRECTORY" || exit
+# Переходим в целевую директорию
+cd "$DIRECTORY/" || exit
 
-# Устанавливаем Git
+# Устанавливаем Git и Python
+echo -e "${GREEN}Установка Git и Python.${NC}"
 apt update
-apt install -y git
+apt install -y git python3 python3-venv
 
-# Устанавливаем Python 3 и инструмент для создания виртуального окружения
-apt install -y python3 python3-venv
-
-# Создаем виртуальное окружение
+# Создаем виртуальное окружение и активируем его
+echo -e "${GREEN}Создание и активация виртуального окружения.${NC}"
 python3 -m venv venv
-
-# Активируем виртуальное окружение
 source venv/bin/activate
 
-# Устанавливаем pip и обновляем его
+# Обновляем pip
+echo -e "${GREEN}Обновление pip.${NC}"
 pip install --upgrade pip
 
-# Устанавливаем PyInstaller
-pip install pyinstaller
-
-# Клонируем репозиторий с программой в зависимости от типа (public или private)
-if [ -z "$REPO_TYPE" ]; then
-    REPO_TYPE="public"
-fi
-
+# Клонируем репозиторий с программой
+echo -e "${GREEN}Клонирование репозитория.${NC}"
 if [ "$REPO_TYPE" = "private" ]; then
-    git clone https://$GITUSERNAME:$TOKEN@github.com/$GITUSERNAME/$APPNAME.git
+    git clone "https://$GITUSERNAME:$TOKEN@github.com/$GITUSERNAME/$APPNAME.git"
 else
-    git clone https://github.com/$GITUSERNAME/$APPNAME.git
-    exit 1
+    git clone "https://github.com/$GITUSERNAME/$APPNAME.git"
 fi
 
 # Переходим в папку клонированного репозитория
-cd $APPNAME || exit
+cd "$APPNAME/" || exit
 
-# Устанавливаем зависимости из requirements.txt, который лежит в папке клонированного репозитория
+# Устанавливаем разрешение для записи в log.txt
+chmod 777 log.txt
+
+# Устанавливаем зависимости из requirements.txt
+echo -e "${GREEN}Установка зависимостей из requirements.txt.${NC}"
 pip install -r requirements.txt
 
-# Компилируем Python-программу в исполняемый файл 
-pyinstaller --onefile $MAINFILE.py
-
-# Создаем systemd-файл службы при необходимости с флагами (если не нужны, то просто ExecStart=$DIRECTORY/yourproject/dist/your_programm)
-tee /etc/systemd/system/$MAINFILE.service > /dev/null <<EOT
+# Создаем systemd-файл службы
+echo -e "${GREEN}Создание файла службы systemd.${NC}"
+cat << EOF > "/etc/systemd/system/$MAINFILE.service"
 [Unit]
 Description=Controller Service
 After=network.target
@@ -72,17 +91,25 @@ After=network.target
 User=root
 Group=root
 WorkingDirectory=$DIRECTORY/$APPNAME
-ExecStart=$DIRECTORY/$APPNAME/dist/$MAINFILE
+ExecStart=$DIRECTORY/$APPNAME/python3 $MAINFILE.py
 Restart=always
 RestartSec=3
 
 [Install]
 WantedBy=multi-user.target
-EOT
+EOF
 
-# Перезагружаем демон systemd, чтобы отразить изменения
+# Перезагружаем демон systemd
+echo -e "${GREEN}Перезагрузка демона systemd.${NC}"
 systemctl daemon-reload
 
+# Выводим сообщение о завершении установки
+echo -e "${GREEN}Установка завершена.${NC}"
+
 # Включаем и запускаем службу
-systemctl enable $MAINFILE
-systemctl start $MAINFILE
+echo -e "${GREEN}Включение и запуск службы.${NC}"
+systemctl enable "$MAINFILE"
+systemctl start "$MAINFILE"
+
+
+
